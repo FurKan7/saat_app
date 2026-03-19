@@ -56,3 +56,6 @@ models/
 # Local/static demo images (store elsewhere for production)
 watch_images/
 
+# Local debug artifacts (per-request images/JSON)
+apps/api/static/debug/
+
