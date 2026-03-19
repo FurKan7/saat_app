@@ -1,0 +1,32 @@
+{
+  "name": "watch-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "install": "npm install --workspaces",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "bash scripts/run-api.sh",
+    "dev:web": "cd apps/web && npx next dev",
+    "dev:web:clean": "cd apps/web && rm -rf .next && npx next dev",
+    "build": "npm run build:web",
+    "build:web": "cd apps/web && npx next build",
+    "migrate": "cd scripts && python migrate.py",
+    "migrate:check": "cd scripts && python -c \"from dotenv import load_dotenv; from pathlib import Path; import os; load_dotenv(Path(__file__).parent.parent / 'apps' / 'api' / '.env'); print('DATABASE_URL:', os.getenv('DATABASE_URL', 'NOT SET')[:50] + '...' if os.getenv('DATABASE_URL') else 'NOT SET')\"",
+    "seed": "cd scripts && python seed.py",
+    "download-images": "cd scripts && python download_images.py",
+    "test:setup": "./scripts/test_setup.sh",
+    "test:quick": "./scripts/quick_test.sh",
+    "setup:supabase": "./scripts/setup_from_supabase.sh",
+    "check:supabase": "cd scripts && python check_supabase.py",
+    "deploy:api": "echo 'Deploy to Railway: Connect GitHub repo and set env vars'",
+    "deploy:web": "echo 'Deploy to Netlify: Connect GitHub repo and set build command'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "shadcn": "^3.7.0"
+  }
+}

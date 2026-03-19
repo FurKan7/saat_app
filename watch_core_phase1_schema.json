@@ -1,0 +1,118 @@
+{
+  "table": "watch_core",
+  "source": "abtsaat.com",
+  "required_fields": [
+    "product_url",
+    "product_name",
+    "case_diameter_mm",
+    "gender",
+    "water_resistance_atm",
+    "glass_type",
+    "movement_type"
+  ],
+  "columns": [
+    {
+      "name": "watch_id",
+      "dtype": "int64"
+    },
+    {
+      "name": "source",
+      "dtype": "object"
+    },
+    {
+      "name": "product_url",
+      "dtype": "object"
+    },
+    {
+      "name": "image_url",
+      "dtype": "object"
+    },
+    {
+      "name": "brand",
+      "dtype": "object"
+    },
+    {
+      "name": "product_name",
+      "dtype": "object"
+    },
+    {
+      "name": "sku",
+      "dtype": "object"
+    },
+    {
+      "name": "price_raw",
+      "dtype": "object"
+    },
+    {
+      "name": "price_value",
+      "dtype": "float64"
+    },
+    {
+      "name": "currency",
+      "dtype": "object"
+    },
+    {
+      "name": "case_diameter_mm",
+      "dtype": "float64"
+    },
+    {
+      "name": "gender",
+      "dtype": "object"
+    },
+    {
+      "name": "water_resistance_atm",
+      "dtype": "float64"
+    },
+    {
+      "name": "glass_type",
+      "dtype": "object"
+    },
+    {
+      "name": "movement_type",
+      "dtype": "object"
+    },
+    {
+      "name": "case_back",
+      "dtype": "object"
+    },
+    {
+      "name": "case_thickness_mm",
+      "dtype": "float64"
+    },
+    {
+      "name": "chronometer",
+      "dtype": "object"
+    },
+    {
+      "name": "case_color",
+      "dtype": "object"
+    },
+    {
+      "name": "dial_type",
+      "dtype": "object"
+    },
+    {
+      "name": "lug_width_mm",
+      "dtype": "float64"
+    },
+    {
+      "name": "lug_to_lug_mm",
+      "dtype": "float64"
+    },
+    {
+      "name": "description",
+      "dtype": "object"
+    }
+  ],
+  "notes": {
+    "currency_default": "TRY",
+    "currency_supported": [
+      "TRY",
+      "USD",
+      "EUR",
+      "GBP"
+    ],
+    "no_quality_checks": true,
+    "spec_extraction": "label-scan across scraped spec columns (robust to column shifts)"
+  }
+}
