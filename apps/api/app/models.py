@@ -1,6 +1,6 @@
 """SQLAlchemy models for Watch Community Platform."""
-from sqlalchemy import Column, Integer, String, Text, Numeric, ForeignKey, CheckConstraint, UniqueConstraint, TIMESTAMP
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, String, Text, Numeric, ForeignKey, CheckConstraint, UniqueConstraint, TIMESTAMP, Boolean
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db import Base
@@ -14,6 +14,7 @@ class User(Base):
     username = Column(String(100))
     display_name = Column(String(200))
     avatar_url = Column(Text)
+    is_admin = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -183,4 +184,63 @@ class WatchEmbedding(Base):
     __table_args__ = (
         UniqueConstraint("watch_id", "model_name", name="uq_watch_embedding"),
     )
+
+
+class UserCollection(Base):
+    __tablename__ = "user_collections"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(Text, nullable=False)
+    description = Column(Text)
+
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", lazy="joined")
+
+
+class WatchSuggestion(Base):
+    __tablename__ = "watch_suggestions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    submitted_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(50), nullable=False)
+
+    sku = Column(Text)
+    source = Column(Text)
+    product_url = Column(Text)
+    product_name = Column(Text)
+    brand = Column(Text)
+    image_url = Column(Text)
+
+    ai_output_json = Column(JSONB)
+    admin_notes = Column(Text)
+
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", lazy="joined")
+
+
+class UserCollectionItem(Base):
+    __tablename__ = "user_collection_items"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    collection_id = Column(Integer, ForeignKey("user_collections.id", ondelete="CASCADE"), nullable=False)
+
+    status = Column(String(50), nullable=False)
+
+    sku = Column(Text)
+    source = Column(Text)
+    product_url = Column(Text)
+    product_name = Column(Text)
+    brand = Column(Text)
+    image_url = Column(Text)
+
+    watch_id = Column(Integer, ForeignKey("watch_core.watch_id", ondelete="SET NULL"), nullable=True)
+    suggestion_id = Column(Integer, ForeignKey("watch_suggestions.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 

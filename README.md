@@ -103,9 +103,15 @@ The resolver determines the "best known" spec value based on priority:
    Create `apps/web/.env.local`:
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:8000
+   # Optional: copy apps/web/.env.example → apps/web/.env.local for email login (same Supabase project as the API)
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   NEXT_PUBLIC_SITE_URL=http://localhost:3000
    ```
+
+   **Password reset:** In Supabase → **Authentication** → **URL configuration**, add these to **Redirect URLs** (adjust host/port if needed):
+   - `http://localhost:3000/auth/reset-password`
+   - Your production site URL with the same path for deploys.
 
 4. **Run database migrations**:
    ```bash
@@ -134,6 +140,14 @@ The resolver determines the "best known" spec value based on priority:
 
 - **Backend only**: `npm run dev:api`
 - **Frontend only**: `npm run dev:web`
+
+If you run uvicorn yourself, start it from **`apps/api`** (the FastAPI package is `app` there). From the repo root, `uvicorn app.main:app` fails because `app` would resolve to the root `app.py` (Gradio), not `apps/api/app/main.py`.
+
+```bash
+cd apps/api
+conda activate saat_app   # or your venv
+uvicorn app.main:app --reload --port 8000
+```
 
 ## API Endpoints
 

@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { Watch } from 'lucide-react'
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 interface WatchCardProps {
   watch: {
     watch_id: number
@@ -16,6 +18,8 @@ interface WatchCardProps {
 
 export function WatchCard({ watch }: WatchCardProps) {
   const imageUrl = watch.image_url?.split(' ')[0] || null
+  const resolvedImageUrl =
+    imageUrl && imageUrl.startsWith('/static/') ? `${API_BASE}${imageUrl}` : imageUrl
 
   return (
     <Link
@@ -25,7 +29,7 @@ export function WatchCard({ watch }: WatchCardProps) {
       <div className="aspect-square bg-gray-100 overflow-hidden">
         {imageUrl ? (
           <img
-            src={imageUrl}
+            src={resolvedImageUrl ?? undefined}
             alt={watch.product_name}
             className="w-full h-full object-cover"
             loading="lazy"

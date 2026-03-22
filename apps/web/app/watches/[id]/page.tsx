@@ -11,6 +11,8 @@ import { VotingUI } from '@/components/VotingUI'
 import { CommentsList } from '@/components/CommentsList'
 import { useState } from 'react'
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export default function WatchDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -81,6 +83,8 @@ export default function WatchDetailPage() {
   }
 
   const imageUrl = watch.image_url?.split(' ')[0]
+  const resolvedImageUrl =
+    imageUrl && imageUrl.startsWith('/static/') ? `${API_BASE}${imageUrl}` : imageUrl
 
   return (
     <Layout>
@@ -99,11 +103,11 @@ export default function WatchDetailPage() {
 
         {/* Watch Header */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden mb-8">
-          <div className={`grid gap-8 p-6 md:p-8 ${imageUrl ? 'grid-cols-1 lg:grid-cols-2' : ''}`}>
-            {imageUrl && (
+        <div className={`grid gap-8 p-6 md:p-8 ${resolvedImageUrl ? 'grid-cols-1 lg:grid-cols-2' : ''}`}>
+            {resolvedImageUrl && (
               <div className="aspect-square max-w-lg bg-gray-100 rounded-2xl overflow-hidden">
                 <img
-                  src={imageUrl}
+                  src={resolvedImageUrl}
                   alt={watch.product_name}
                   className="w-full h-full object-cover"
                 />

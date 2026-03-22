@@ -123,6 +123,8 @@ def main():
         migrations_dir / "001_initial_schema.sql",
         migrations_dir / "002_enable_pgvector.sql",
         migrations_dir / "003_update_embeddings_for_siglip2.sql",
+        migrations_dir / "004_user_collections_and_suggestions.sql",
+        migrations_dir / "005_user_is_admin.sql",
     ]
     
     print(f"\n🗄️  Running database migrations...")

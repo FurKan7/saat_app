@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, DragEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useState, useRef, DragEvent, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -54,6 +54,25 @@ export default function UploadPage() {
   const router = useRouter()
   const resultsRef = useRef<HTMLDivElement>(null)
 
+  // Unknown-watch suggestion modal (v1)
+  const [showSuggestModal, setShowSuggestModal] = useState(false)
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null)
+  const [suggestSource, setSuggestSource] = useState('')
+  const [suggestProductUrl, setSuggestProductUrl] = useState('')
+  const [suggestProductName, setSuggestProductName] = useState('')
+  const [suggestSku, setSuggestSku] = useState('')
+  const [suggestBrand, setSuggestBrand] = useState('')
+
+  const collectionsQuery = useQuery({
+    queryKey: ['profile-collections'],
+    queryFn: async (): Promise<Array<{ id: number; name: string }>> => {
+      const response = await api.get('/profile/collections')
+      return response.data.map((c: any) => ({ id: c.id, name: c.name }))
+    },
+    enabled: showSuggestModal,
+    retry: false,
+  })
+
   const identifyMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       const response = await api.post<IdentifyResponse>('/ai/identify', formData, {
@@ -69,6 +88,35 @@ export default function UploadPage() {
     onError: (err: { response?: { data?: { detail?: string } }; message?: string }) => {
       const msg = err.response?.data?.detail ?? err.message ?? 'Request failed'
       toast.error(typeof msg === 'string' ? msg : 'Identification failed')
+    },
+  })
+
+  const addToCollectionMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCollectionId) throw new Error('Select a collection first')
+      if (!imageFile) throw new Error('No image file selected')
+      const fd = new FormData()
+      fd.append('source', suggestSource.trim())
+      fd.append('product_url', suggestProductUrl.trim())
+      fd.append('product_name', suggestProductName.trim())
+      if (suggestSku.trim()) fd.append('sku', suggestSku.trim())
+      if (suggestBrand.trim()) fd.append('brand', suggestBrand.trim())
+      fd.append('image_file', imageFile)
+
+      const response = await api.post(
+        `/profile/collections/${selectedCollectionId}/items`,
+        fd,
+        { headers: { 'Content-Type': false } as any }
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      setShowSuggestModal(false)
+      toast.success('Submitted. Awaiting processing/admin approval.')
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.detail ?? err?.message ?? 'Submission failed'
+      toast.error(msg)
     },
   })
 
@@ -105,6 +153,12 @@ export default function UploadPage() {
   }
 
   const data = identifyMutation.data
+
+  useEffect(() => {
+    if (!showSuggestModal || !data) return
+    setSuggestBrand(data.vlm_attributes?.brand_guess ?? data.candidates?.[0]?.brand ?? '')
+    setSuggestProductName(data.candidates?.[0]?.product_name ?? '')
+  }, [showSuggestModal, data])
 
   return (
     <Layout>
@@ -270,7 +324,123 @@ export default function UploadPage() {
                   <div className="min-w-0">
                     <h2 className="text-xl font-bold text-amber-900 mb-2">Unknown watch</h2>
                     <p className="text-amber-800">The image didn&apos;t match any watch in our database closely.</p>
+
+                    {imageFile ? (
+                      <div className="mt-4">
+                        <Button type="button" onClick={() => setShowSuggestModal(true)}>
+                          Suggest this watch to my collection
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-amber-900/80 mt-2">
+                        Upload a local image (not only URL) to submit a suggestion.
+                      </p>
+                    )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Suggest to collection modal (v1) */}
+            {showSuggestModal && imageFile && (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-lg max-w-xl w-full p-6 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Suggest this watch</h2>
+                      <p className="text-sm text-gray-500 mt-1">This will trigger AI extraction + admin approval.</p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => setShowSuggestModal(false)}>
+                      Close
+                    </Button>
+                  </div>
+
+                  {collectionsQuery.isLoading ? (
+                    <p className="text-sm text-gray-600">Loading your collections…</p>
+                  ) : collectionsQuery.isError ? (
+                    <p className="text-sm text-red-600">Could not load collections.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Collection</label>
+                        <select
+                          value={selectedCollectionId ?? ''}
+                          onChange={(e) => setSelectedCollectionId(e.target.value ? Number(e.target.value) : null)}
+                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                        >
+                          <option value="">Select a collection</option>
+                          {(collectionsQuery.data ?? []).map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Brand (optional)</label>
+                          <input
+                            value={suggestBrand}
+                            onChange={(e) => setSuggestBrand(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">SKU (optional)</label>
+                          <input
+                            value={suggestSku}
+                            onChange={(e) => setSuggestSku(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Product name (required)</label>
+                          <input
+                            value={suggestProductName}
+                            onChange={(e) => setSuggestProductName(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Source (required)</label>
+                          <input
+                            value={suggestSource}
+                            onChange={(e) => setSuggestSource(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                            placeholder="e.g., abtsaat.com"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Product URL (required)</label>
+                          <input
+                            value={suggestProductUrl}
+                            onChange={(e) => setSuggestProductUrl(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        disabled={
+                          addToCollectionMutation.isPending ||
+                          !selectedCollectionId ||
+                          !suggestSource.trim() ||
+                          !suggestProductUrl.trim() ||
+                          !suggestProductName.trim()
+                        }
+                        onClick={() => addToCollectionMutation.mutate()}
+                        className="w-full py-3"
+                      >
+                        {addToCollectionMutation.isPending ? 'Submitting…' : 'Submit suggestion'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

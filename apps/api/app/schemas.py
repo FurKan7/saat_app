@@ -65,6 +65,17 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class ProfileMeResponse(BaseModel):
+    id: UUID
+    username: Optional[str]
+    display_name: Optional[str]
+    avatar_url: Optional[str]
+    is_admin: bool
+
+    class Config:
+        from_attributes = True
+
+
 class WatchCommentResponse(BaseModel):
     id: int
     watch_id: int
@@ -174,4 +185,69 @@ class AIIdentifyResponse(BaseModel):
     detection_crops: Optional[List[DetectionCrop]] = None
     detected_text: Optional[dict] = None
     debug_info: Optional[DebugInfo] = None
+
+
+class UserCollectionResponse(BaseModel):
+    id: int
+    user_id: UUID
+    name: str
+    description: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserCollectionItemResponse(BaseModel):
+    id: int
+    collection_id: int
+    status: str
+
+    sku: Optional[str] = None
+    source: Optional[str] = None
+    product_url: Optional[str] = None
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    image_url: Optional[str] = None
+
+    watch_id: Optional[int] = None
+    suggestion_id: Optional[int] = None
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CreateUserCollectionRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+
+
+class AdminApproveSuggestionRequest(BaseModel):
+    admin_notes: Optional[str] = Field(None, max_length=5000)
+
+
+class WatchSuggestionResponse(BaseModel):
+    id: int
+    submitted_by: UUID
+    status: str
+
+    sku: Optional[str] = None
+    source: Optional[str] = None
+    product_url: Optional[str] = None
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    image_url: Optional[str] = None
+
+    ai_output_json: Optional[dict] = None
+    admin_notes: Optional[str] = None
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 

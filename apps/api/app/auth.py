@@ -2,18 +2,61 @@
 from fastapi import HTTPException, Depends, Header
 from typing import Optional
 import os
-from supabase import create_client, Client
+import httpx
 from app.db import get_db
 from sqlalchemy.orm import Session
 from app.models import User
 from uuid import UUID
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
 
-supabase: Optional[Client] = None
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+async def _fetch_user_from_supabase_auth(jwt: str) -> dict:
+    """
+    Validate the access token by calling Supabase GoTrue (same as curl / auth docs).
+    SUPABASE_KEY must be the project's anon (JWT) key from Dashboard → Settings → API,
+    matching NEXT_PUBLIC_SUPABASE_ANON_KEY in the web app — not the sb_publishable_ key alone.
+    """
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
+
+    url = f"{SUPABASE_URL}/auth/v1/user"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                url,
+                headers={
+                    "Authorization": f"Bearer {jwt}",
+                    "apikey": SUPABASE_KEY,
+                },
+                timeout=15.0,
+            )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Could not reach Supabase Auth: {e!s}")
+
+    if response.status_code != 200:
+        detail = "Invalid or expired token"
+        try:
+            body = response.json()
+            detail = (
+                body.get("error_description")
+                or body.get("msg")
+                or body.get("message")
+                or body.get("error")
+                or detail
+            )
+        except Exception:
+            if response.text:
+                detail = response.text[:200]
+        raise HTTPException(status_code=401, detail=str(detail))
+
+    data = response.json()
+    # GoTrue returns the user object at top level; some clients wrap it
+    user = data.get("user") if isinstance(data.get("user"), dict) else data
+    if not user or not user.get("id"):
+        raise HTTPException(status_code=401, detail="Malformed user response from Supabase")
+    return user
 
 
 async def get_current_user(
@@ -24,38 +67,32 @@ async def get_current_user(
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
 
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Supabase not configured")
+    raw = authorization.replace("Bearer ", "", 1).strip()
+    if not raw:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+
+    user_payload = await _fetch_user_from_supabase_auth(raw)
+    supabase_user_id = UUID(str(user_payload["id"]))
+    email = user_payload.get("email")
 
     try:
-        # Extract token from "Bearer <token>"
-        token = authorization.replace("Bearer ", "")
-        
-        # Verify token with Supabase
-        user_data = supabase.auth.get_user(token)
-        
-        if not user_data or not user_data.user:
-            raise HTTPException(status_code=401, detail="Invalid token")
-
-        supabase_user_id = UUID(str(user_data.user.id))
-        
-        # Get or create user in our database
         user = db.query(User).filter(User.supabase_user_id == supabase_user_id).first()
-        
+
         if not user:
-            # Create user record
             user = User(
                 supabase_user_id=supabase_user_id,
-                username=user_data.user.email,
-                display_name=user_data.user.email,
+                username=email,
+                display_name=email,
             )
             db.add(user)
             db.commit()
             db.refresh(user)
-        
+
         return user
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"User sync failed: {str(e)}")
 
 
 async def get_optional_user(
@@ -67,4 +104,3 @@ async def get_optional_user(
         return await get_current_user(authorization, db)
     except HTTPException:
         return None
-

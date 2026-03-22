@@ -1,3 +1,4 @@
+import os
 import time
 from dataclasses import dataclass
 from typing import List, Tuple
@@ -154,4 +155,29 @@ with gr.Blocks() as app:
     generate_btn.click(fn=run_detection, inputs=inputs, outputs=outputs)
     image.upload(fn=run_detection, inputs=inputs, outputs=outputs)
 
-app.launch()
+
+def _launch_gradio() -> None:
+    """
+    Gradio 6 may raise if it cannot probe localhost (VPN/proxy). Prefer local bind;
+    set GRADIO_SHARE=1 or use share fallback when needed.
+    """
+    port = int(os.environ.get("GRADIO_SERVER_PORT", "7860"))
+    host = os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1")
+    if os.environ.get("GRADIO_SHARE", "").strip().lower() in ("1", "true", "yes"):
+        app.launch(server_name=host, server_port=port, share=True, inbrowser=False)
+        return
+    try:
+        app.launch(server_name=host, server_port=port, share=False, inbrowser=False)
+    except ValueError as e:
+        if "localhost" in str(e).lower() or "shareable link" in str(e).lower():
+            print(
+                "Gradio could not use localhost; starting with share=True (public try.gradio link). "
+                "Fix network/VPN or set GRADIO_SERVER_NAME/PORT."
+            )
+            app.launch(server_name=host, server_port=port, share=True, inbrowser=False)
+        else:
+            raise
+
+
+if __name__ == "__main__":
+    _launch_gradio()

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from app.routers import watches, contributions, resolver, ai
+from app.routers import profile_collections, admin_watch_suggestions
 
 app = FastAPI(
     title="Watch Community Platform API",
@@ -31,6 +32,8 @@ app.include_router(watches.router)
 app.include_router(contributions.router)
 app.include_router(resolver.router)
 app.include_router(ai.router)
+app.include_router(profile_collections.router)
+app.include_router(admin_watch_suggestions.router)
 
 
 @app.get("/")

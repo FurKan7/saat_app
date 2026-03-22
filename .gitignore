@@ -59,3 +59,12 @@ watch_images/
 # Local debug artifacts (per-request images/JSON)
 apps/api/static/debug/
 
+# Uploaded user images (store in object storage in production)
+apps/api/static/uploads/
+
+# Gradio local cache
+.gradio/
+
+# TypeScript incremental build info
+**/tsconfig.tsbuildinfo
+

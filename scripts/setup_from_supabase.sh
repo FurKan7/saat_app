@@ -14,7 +14,6 @@ echo ""
 SUPABASE_PROJECT_REF="zedflowipppmlkspxkik"
 SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
 SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZGZsb3dpcHBwbWxrc3B4a2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjMxNzAsImV4cCI6MjA4Mzg5OTE3MH0.nw9PqbkGZTqWJOecrShK8aPBqOgiJq6q6WhulOC7XVY"
-SUPABASE_PUBLISHABLE_KEY="sb_publishable_sGZRHZ5Drhlx9W_MiEr3Ug_p7dP5BnF"
 
 # Generate JWT secret
 JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || echo "change-this-secret-key-in-production")
@@ -47,9 +46,9 @@ cat > apps/web/.env.local << EOF
 # API URL
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
-# Supabase (for auth)
+# Supabase (for auth) — use the same JWT anon key as SUPABASE_KEY (eyJ...), not sb_publishable_*
 NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_PUBLISHABLE_KEY}
+NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 EOF
 
 echo "✅ Created apps/web/.env.local"
