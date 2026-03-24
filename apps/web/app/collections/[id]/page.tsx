@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -81,6 +81,8 @@ export default function CollectionDetailPage() {
 
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
   const addItem = useMutation({
@@ -93,6 +95,8 @@ export default function CollectionDetailPage() {
     onSuccess: () => {
       setBrand('')
       setModel('')
+      setImageFile(null)
+      if (imageInputRef.current) imageInputRef.current.value = ''
       setFormError(null)
       queryClient.invalidateQueries({ queryKey: ['collection-items', collectionId] })
     },
@@ -129,6 +133,7 @@ export default function CollectionDetailPage() {
     const fd = new FormData()
     fd.append('brand', brand.trim())
     if (model.trim()) fd.append('product_name', model.trim())
+    if (imageFile) fd.append('image_file', imageFile)
     addItem.mutate(fd)
   }
 
@@ -147,7 +152,7 @@ export default function CollectionDetailPage() {
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-1">Add watch to this collection</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Brand is required. Add a model name if you know it. No photo or product link needed.
+                Brand is required. Model and a photo of your watch are optional; a photo helps review and cataloging.
               </p>
 
               <div className="space-y-4">
@@ -168,6 +173,17 @@ export default function CollectionDetailPage() {
                     onChange={(e) => setModel(e.target.value)}
                     className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
                     placeholder="e.g. G-Shock DW-5600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Photo of your watch (optional)</label>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                    className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-900 hover:file:bg-gray-200"
                   />
                 </div>
 
