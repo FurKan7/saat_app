@@ -113,7 +113,7 @@ def add_watch_to_collection(
     collection_id: int,
     brand: str = Form(...),
     product_name: Optional[str] = Form(None),
-    image_file: Optional[UploadFile] = File(None),
+    image_file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -129,9 +129,9 @@ def add_watch_to_collection(
     # Stable unique pseudo-URL for dedup within our app; admin approve still creates watch_core with source+url+name.
     product_url = f"collection://{collection_id}/{uuid.uuid4().hex}"
 
-    image_url: Optional[str] = None
-    if image_file is not None and image_file.filename:
-        image_url = _save_upload(image_file)
+    if not (image_file.filename or "").strip():
+        raise HTTPException(status_code=400, detail="Photo is required")
+    image_url = _save_upload(image_file)
 
     item = UserCollectionItem(
         collection_id=collection_id,

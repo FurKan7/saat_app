@@ -125,15 +125,19 @@ export default function CollectionDetailPage() {
     }
   }
 
-  const canSubmit = Boolean(brand.trim())
+  const canSubmit = Boolean(brand.trim() && imageFile)
 
   const submit = () => {
     setFormError(null)
-    if (!canSubmit) return
+    if (!brand.trim()) return
+    if (!imageFile) {
+      setFormError('Please add a photo of your watch.')
+      return
+    }
     const fd = new FormData()
     fd.append('brand', brand.trim())
     if (model.trim()) fd.append('product_name', model.trim())
-    if (imageFile) fd.append('image_file', imageFile)
+    fd.append('image_file', imageFile)
     addItem.mutate(fd)
   }
 
@@ -152,7 +156,7 @@ export default function CollectionDetailPage() {
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-1">Add watch to this collection</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Brand is required. Model and a photo of your watch are optional; a photo helps review and cataloging.
+                Brand and a photo of your watch are required. Model is optional.
               </p>
 
               <div className="space-y-4">
@@ -177,11 +181,12 @@ export default function CollectionDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Photo of your watch (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Photo of your watch (required)</label>
                   <input
                     ref={imageInputRef}
                     type="file"
                     accept="image/*"
+                    required
                     onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
                     className="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-900 hover:file:bg-gray-200"
                   />

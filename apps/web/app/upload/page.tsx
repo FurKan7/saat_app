@@ -57,10 +57,7 @@ export default function UploadPage() {
   // Unknown-watch suggestion modal (v1)
   const [showSuggestModal, setShowSuggestModal] = useState(false)
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null)
-  const [suggestSource, setSuggestSource] = useState('')
-  const [suggestProductUrl, setSuggestProductUrl] = useState('')
   const [suggestProductName, setSuggestProductName] = useState('')
-  const [suggestSku, setSuggestSku] = useState('')
   const [suggestBrand, setSuggestBrand] = useState('')
 
   const collectionsQuery = useQuery({
@@ -95,12 +92,10 @@ export default function UploadPage() {
     mutationFn: async () => {
       if (!selectedCollectionId) throw new Error('Select a collection first')
       if (!imageFile) throw new Error('No image file selected')
+      if (!suggestBrand.trim()) throw new Error('Brand is required')
       const fd = new FormData()
-      fd.append('source', suggestSource.trim())
-      fd.append('product_url', suggestProductUrl.trim())
-      fd.append('product_name', suggestProductName.trim())
-      if (suggestSku.trim()) fd.append('sku', suggestSku.trim())
-      if (suggestBrand.trim()) fd.append('brand', suggestBrand.trim())
+      fd.append('brand', suggestBrand.trim())
+      if (suggestProductName.trim()) fd.append('product_name', suggestProductName.trim())
       fd.append('image_file', imageFile)
 
       const response = await api.post(
@@ -375,64 +370,34 @@ export default function UploadPage() {
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Brand (optional)</label>
-                          <input
-                            value={suggestBrand}
-                            onChange={(e) => setSuggestBrand(e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">SKU (optional)</label>
-                          <input
-                            value={suggestSku}
-                            onChange={(e) => setSuggestSku(e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Brand (required)</label>
+                        <input
+                          value={suggestBrand}
+                          onChange={(e) => setSuggestBrand(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                          placeholder="e.g. Casio"
+                        />
                       </div>
 
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Product name (required)</label>
-                          <input
-                            value={suggestProductName}
-                            onChange={(e) => setSuggestProductName(e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Source (required)</label>
-                          <input
-                            value={suggestSource}
-                            onChange={(e) => setSuggestSource(e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                            placeholder="e.g., abtsaat.com"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Product URL (required)</label>
-                          <input
-                            value={suggestProductUrl}
-                            onChange={(e) => setSuggestProductUrl(e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                            placeholder="https://..."
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Model (optional)</label>
+                        <input
+                          value={suggestProductName}
+                          onChange={(e) => setSuggestProductName(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
+                          placeholder="e.g. G-Shock DW-5600"
+                        />
                       </div>
+
+                      <p className="text-xs text-gray-500">Your uploaded photo will be attached automatically.</p>
 
                       <Button
                         type="button"
                         disabled={
                           addToCollectionMutation.isPending ||
                           !selectedCollectionId ||
-                          !suggestSource.trim() ||
-                          !suggestProductUrl.trim() ||
-                          !suggestProductName.trim()
+                          !suggestBrand.trim()
                         }
                         onClick={() => addToCollectionMutation.mutate()}
                         className="w-full py-3"
