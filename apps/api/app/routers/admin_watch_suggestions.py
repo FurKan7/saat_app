@@ -57,15 +57,18 @@ def approve_suggestion(
     if existing:
         watch_id = existing.watch_id
     else:
-        if not (sug.source and sug.product_url and sug.product_name):
+        if not (sug.source and sug.product_url):
             raise HTTPException(status_code=400, detail="Missing required watch identifiers to create watch_core")
+        b = (sug.brand or "").strip()
+        m = (sug.product_name or "").strip()
+        catalog_name = f"{b} {m}".strip() if m else b or "Unnamed watch"
 
         core = WatchCore(
             source=sug.source,
             product_url=sug.product_url,
             image_url=sug.image_url,
             brand=sug.brand,
-            product_name=sug.product_name,
+            product_name=catalog_name,
             sku=sug.sku,
         )
         db.add(core)

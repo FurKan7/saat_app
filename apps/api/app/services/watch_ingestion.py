@@ -159,14 +159,16 @@ def process_user_collection_item(item_id: int) -> None:
         item.status = "pending_admin"
         db.commit()
 
-        # 4) Run AI extraction and store result
-        try:
-            image_path = _image_url_to_path(item.image_url)
-            ai_output = _run_ai_extraction(image_path)
-            _write_ai_output_to_suggestion(suggestion, ai_output)
-            db.commit()
-        except Exception:
-            # Keep suggestion pending_admin so admin can see ai_output_json (possibly null)
+        # 4) Run AI extraction when an image exists (optional for user-submitted brand-only flow)
+        if item.image_url:
+            try:
+                image_path = _image_url_to_path(item.image_url)
+                ai_output = _run_ai_extraction(image_path)
+                _write_ai_output_to_suggestion(suggestion, ai_output)
+                db.commit()
+            except Exception:
+                db.commit()
+        else:
             db.commit()
 
     finally:

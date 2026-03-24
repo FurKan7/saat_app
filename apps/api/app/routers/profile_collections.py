@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+
+# Synthetic identifiers for user-submitted rows without a product URL (catalog creation on admin approve).
+_USER_COLLECTION_SOURCE = "user_collection"
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -108,12 +111,9 @@ def list_collection_items(
 @router.post("/collections/{collection_id}/items", response_model=UserCollectionItemResponse)
 def add_watch_to_collection(
     collection_id: int,
-    source: str = Form(...),
-    product_url: str = Form(...),
-    product_name: str = Form(...),
-    sku: Optional[str] = Form(None),
-    brand: Optional[str] = Form(None),
-    image_file: UploadFile = File(...),
+    brand: str = Form(...),
+    product_name: Optional[str] = Form(None),
+    image_file: Optional[UploadFile] = File(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -121,16 +121,26 @@ def add_watch_to_collection(
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
 
-    image_url = _save_upload(image_file)
+    brand_clean = (brand or "").strip()
+    if not brand_clean:
+        raise HTTPException(status_code=400, detail="Brand is required")
+
+    model_clean = (product_name or "").strip() or None
+    # Stable unique pseudo-URL for dedup within our app; admin approve still creates watch_core with source+url+name.
+    product_url = f"collection://{collection_id}/{uuid.uuid4().hex}"
+
+    image_url: Optional[str] = None
+    if image_file is not None and image_file.filename:
+        image_url = _save_upload(image_file)
 
     item = UserCollectionItem(
         collection_id=collection_id,
         status="processing_ai",
-        sku=sku,
-        source=source,
+        sku=None,
+        source=_USER_COLLECTION_SOURCE,
         product_url=product_url,
-        product_name=product_name,
-        brand=brand,
+        product_name=model_clean,
+        brand=brand_clean,
         image_url=image_url,
         watch_id=None,
         suggestion_id=None,

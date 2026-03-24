@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 type UserCollection = {
@@ -27,6 +28,15 @@ type CollectionItem = {
   watch_id?: number | null
   suggestion_id?: number | null
   created_at: string
+}
+
+function itemTitle(it: CollectionItem): string {
+  const brand = it.brand?.trim()
+  const model = it.product_name?.trim()
+  if (brand && model) return `${brand} · ${model}`
+  if (brand) return brand
+  if (model) return model
+  return 'Watch entry'
 }
 
 export default function CollectionDetailPage() {
@@ -69,12 +79,9 @@ export default function CollectionDetailPage() {
     },
   })
 
-  const [sku, setSku] = useState('')
-  const [source, setSource] = useState('')
-  const [productUrl, setProductUrl] = useState('')
-  const [productName, setProductName] = useState('')
   const [brand, setBrand] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [model, setModel] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
 
   const addItem = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -84,13 +91,13 @@ export default function CollectionDetailPage() {
       return response.data as CollectionItem
     },
     onSuccess: () => {
-      setSku('')
-      setSource('')
-      setProductUrl('')
-      setProductName('')
       setBrand('')
-      setImageFile(null)
+      setModel('')
+      setFormError(null)
       queryClient.invalidateQueries({ queryKey: ['collection-items', collectionId] })
+    },
+    onError: (e: any) => {
+      setFormError(e?.response?.data?.detail ?? e?.message ?? 'Failed to add watch')
     },
   })
 
@@ -100,7 +107,7 @@ export default function CollectionDetailPage() {
   const statusLabel = (s: string) => {
     switch (s) {
       case 'processing_ai':
-        return 'Processing AI'
+        return 'Processing'
       case 'matched_existing':
         return 'Linked to catalog'
       case 'pending_admin':
@@ -114,7 +121,16 @@ export default function CollectionDetailPage() {
     }
   }
 
-  const canSubmit = Boolean(source.trim() && productUrl.trim() && productName.trim() && imageFile)
+  const canSubmit = Boolean(brand.trim())
+
+  const submit = () => {
+    setFormError(null)
+    if (!canSubmit) return
+    const fd = new FormData()
+    fd.append('brand', brand.trim())
+    if (model.trim()) fd.append('product_name', model.trim())
+    addItem.mutate(fd)
+  }
 
   return (
     <Layout>
@@ -129,89 +145,36 @@ export default function CollectionDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <div className="space-y-4">
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Add watch to this collection</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">Add watch to this collection</h2>
+              <p className="text-sm text-gray-500 mb-5">
+                Brand is required. Add a model name if you know it. No photo or product link needed.
+              </p>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Brand (required)</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      if (f) setImageFile(f)
-                    }}
-                    className="w-full"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    placeholder="e.g. Casio"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Source (required)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Model (optional)</label>
                   <input
-                    value={source}
-                    onChange={(e) => setSource(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                    placeholder="e.g., abtsaat.com"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    placeholder="e.g. G-Shock DW-5600"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product URL (required)</label>
-                  <input
-                    value={productUrl}
-                    onChange={(e) => setProductUrl(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                    placeholder="https://..."
-                  />
-                </div>
+                {formError && <p className="text-sm text-red-600">{formError}</p>}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product name (required)</label>
-                  <input
-                    value={productName}
-                    onChange={(e) => setProductName(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                    placeholder="e.g., Casio WR50M"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SKU (optional)</label>
-                    <input
-                      value={sku}
-                      onChange={(e) => setSku(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                      placeholder="sku"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Brand (optional)</label>
-                    <input
-                      value={brand}
-                      onChange={(e) => setBrand(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900"
-                      placeholder="Casio"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => {
-                    if (!canSubmit) return
-                    const fd = new FormData()
-                    fd.append('source', source.trim())
-                    fd.append('product_url', productUrl.trim())
-                    fd.append('product_name', productName.trim())
-                    if (sku.trim()) fd.append('sku', sku.trim())
-                    if (brand.trim()) fd.append('brand', brand.trim())
-                    if (imageFile) fd.append('image_file', imageFile)
-                    addItem.mutate(fd)
-                  }}
-                  disabled={!canSubmit || addItem.isPending}
-                  className="w-full py-3"
-                >
-                  {addItem.isPending ? 'Submitting…' : 'Submit to collection'}
+                <Button onClick={submit} disabled={!canSubmit || addItem.isPending} className="w-full py-3">
+                  {addItem.isPending ? 'Adding…' : 'Add to collection'}
                 </Button>
               </div>
             </div>
@@ -229,22 +192,23 @@ export default function CollectionDetailPage() {
                 <div className="space-y-3">
                   {items.map((it) => (
                     <div key={it.id} className="border border-gray-200 rounded-2xl p-4 flex items-start gap-4">
-                      <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center text-gray-400">
+                      <div className="w-20 h-20 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center text-gray-400 text-xs shrink-0">
                         {it.image_url ? (
-                          // Image urls for uploads are relative to backend static mount.
                           <img
                             src={it.image_url.startsWith('/static/') ? `${API_BASE}${it.image_url}` : it.image_url}
                             alt=""
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span>IMG</span>
+                          <span>No image</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{it.product_name || 'Untitled'}</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{itemTitle(it)}</p>
                         <p className="text-xs text-gray-500 mt-1">{statusLabel(it.status)}</p>
-                        {it.suggestion_id && <p className="text-xs text-gray-500 mt-1">Suggestion #{it.suggestion_id}</p>}
+                        {it.suggestion_id && (
+                          <p className="text-xs text-gray-500 mt-1">Suggestion #{it.suggestion_id}</p>
+                        )}
                         {it.watch_id && <p className="text-xs text-gray-500 mt-1">Watch linked: #{it.watch_id}</p>}
                       </div>
                     </div>
@@ -258,4 +222,3 @@ export default function CollectionDetailPage() {
     </Layout>
   )
 }
-
