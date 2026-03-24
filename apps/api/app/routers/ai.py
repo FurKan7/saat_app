@@ -14,8 +14,9 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import sys
 
+from app.auth import get_current_user
 from app.db import get_db, get_db_or_rest
-from app.models import WatchCore, WatchEmbedding, WatchSpecState
+from app.models import User, WatchCore, WatchEmbedding, WatchSpecState
 from app.schemas import (
     AIIdentifyResponse, AIIdentifyCandidate, VLMAttributes,
     DetectionCrop, DebugInfo,
@@ -112,6 +113,7 @@ async def identify_watch(
     use_vlm: bool = Form(True),
     detector_model_id: Optional[str] = Form(None),
     db_or_rest: tuple = Depends(get_db_or_rest),
+    _current_user: User = Depends(get_current_user),
 ):
     """
     Watch identification pipeline:

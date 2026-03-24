@@ -117,8 +117,12 @@ def sample_watches(session, n: int, seed: int = 42) -> List[WatchCore]:
 
 
 def call_identify_api(image_path_or_url: str, api_url: str, timeout: int = 30) -> Optional[Dict]:
-    """Call /ai/identify endpoint."""
+    """Call /ai/identify endpoint. Set SAAT_API_JWT to a Supabase access token if the API requires auth."""
     try:
+        auth_headers = {}
+        token = os.environ.get("SAAT_API_JWT", "").strip()
+        if token:
+            auth_headers["Authorization"] = f"Bearer {token}"
         # Determine if it's a file path or URL
         is_file = False
         if not image_path_or_url.startswith('http'):
@@ -138,7 +142,8 @@ def call_identify_api(image_path_or_url: str, api_url: str, timeout: int = 30) -
                     response = client.post(
                         f"{api_url}/ai/identify",
                         files=files,
-                        data=data
+                        data=data,
+                        headers=auth_headers or None,
                     )
             else:
                 # Use URL - FastAPI Form expects form data (strings)
@@ -149,7 +154,8 @@ def call_identify_api(image_path_or_url: str, api_url: str, timeout: int = 30) -
                 }
                 response = client.post(
                     f"{api_url}/ai/identify",
-                    data=data
+                    data=data,
+                    headers=auth_headers or None,
                 )
             
             response.raise_for_status()

@@ -85,7 +85,7 @@ export default function Home() {
             Discover Watches
           </h1>
           <p className="text-base text-gray-500 max-w-xl mx-auto">
-            Search the community database or identify a watch from a photo.
+            Search the community database. Log in to identify a watch from a photo.
           </p>
         </div>
 

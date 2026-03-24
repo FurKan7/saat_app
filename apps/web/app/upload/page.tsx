@@ -2,7 +2,7 @@
 
 import { useState, useRef, DragEvent, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, type ProfileMe } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Layout } from '@/components/Layout'
@@ -45,6 +45,9 @@ type IdentifyResponse = {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export default function UploadPage() {
+  const [hydrated, setHydrated] = useState(false)
+  const [hasToken, setHasToken] = useState(false)
+
   const [imageUrl, setImageUrl] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -60,13 +63,39 @@ export default function UploadPage() {
   const [suggestProductName, setSuggestProductName] = useState('')
   const [suggestBrand, setSuggestBrand] = useState('')
 
+  useEffect(() => {
+    setHasToken(!!localStorage.getItem('supabase_token'))
+    setHydrated(true)
+  }, [])
+
+  const profileQuery = useQuery({
+    queryKey: ['profile-me'],
+    queryFn: async () => {
+      const res = await api.get<ProfileMe>('/profile/me')
+      return res.data
+    },
+    enabled: hydrated && hasToken,
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (!hydrated) return
+    if (!hasToken) router.replace('/login?next=/upload')
+  }, [hydrated, hasToken, router])
+
+  useEffect(() => {
+    if (!profileQuery.isError) return
+    const status = (profileQuery.error as { response?: { status?: number } })?.response?.status
+    if (status === 401) router.replace('/login?next=/upload')
+  }, [profileQuery.isError, profileQuery.error, router])
+
   const collectionsQuery = useQuery({
     queryKey: ['profile-collections'],
     queryFn: async (): Promise<Array<{ id: number; name: string }>> => {
       const response = await api.get('/profile/collections')
       return response.data.map((c: any) => ({ id: c.id, name: c.name }))
     },
-    enabled: showSuggestModal,
+    enabled: showSuggestModal && profileQuery.isSuccess,
     retry: false,
   })
 
@@ -82,7 +111,11 @@ export default function UploadPage() {
       else if (data.candidates?.length) toast.success('Identification complete.')
       resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     },
-    onError: (err: { response?: { data?: { detail?: string } }; message?: string }) => {
+    onError: (err: { response?: { status?: number; data?: { detail?: string } }; message?: string }) => {
+      if (err.response?.status === 401) {
+        router.replace('/login?next=/upload')
+        return
+      }
       const msg = err.response?.data?.detail ?? err.message ?? 'Request failed'
       toast.error(typeof msg === 'string' ? msg : 'Identification failed')
     },
@@ -154,6 +187,34 @@ export default function UploadPage() {
     setSuggestBrand(data.vlm_attributes?.brand_guess ?? data.candidates?.[0]?.brand ?? '')
     setSuggestProductName(data.candidates?.[0]?.product_name ?? '')
   }, [showSuggestModal, data])
+
+  if (!hydrated || (hasToken && profileQuery.isLoading)) {
+    return (
+      <Layout>
+        <div className="min-h-[50vh] flex flex-col items-center justify-center px-4">
+          <div className="w-10 h-10 rounded-full border-2 border-gray-200 border-t-gray-900 animate-spin mb-4" />
+          <p className="text-sm text-gray-500">Loading…</p>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!hasToken) {
+    return null
+  }
+
+  if (profileQuery.isError) {
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto px-4 py-20 text-center">
+          <p className="text-sm text-red-600 mb-4">Could not verify your session.</p>
+          <Button variant="outline" onClick={() => router.push('/login?next=/upload')}>
+            Sign in again
+          </Button>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

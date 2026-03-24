@@ -52,8 +52,7 @@ export function Layout({ children, searchValue = '', onSearchChange }: LayoutPro
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/watches', label: 'Watches' },
-    { href: '/upload', label: 'Identify' },
-    ...(loggedIn ? ([{ href: '/dashboard', label: 'Dashboard' }] as const) : []),
+    ...(loggedIn ? ([{ href: '/upload', label: 'Identify' }, { href: '/dashboard', label: 'Dashboard' }] as const) : []),
     { href: '/collections', label: 'Collections' },
     ...(showAdmin ? [adminNav] : []),
   ]
@@ -89,12 +88,14 @@ export function Layout({ children, searchValue = '', onSearchChange }: LayoutPro
             {!onSearchChange && <div className="hidden md:block flex-1" />}
 
             <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-              <Link href="/upload">
-                <span className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 sm:px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">
-                  <Camera className="w-4 h-4" />
-                  <span className="hidden sm:inline">Identify</span>
-                </span>
-              </Link>
+              {loggedIn && (
+                <Link href="/upload">
+                  <span className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 sm:px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50">
+                    <Camera className="w-4 h-4" />
+                    <span className="hidden sm:inline">Identify</span>
+                  </span>
+                </Link>
+              )}
 
               {loggedIn ? (
                 <>
@@ -204,9 +205,9 @@ export function Layout({ children, searchValue = '', onSearchChange }: LayoutPro
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center">
             <Link href="/" className="hover:text-gray-900">Home</Link>
             <Link href="/watches" className="hover:text-gray-900">Watches</Link>
-            <Link href="/upload" className="hover:text-gray-900">Identify</Link>
             {loggedIn ? (
               <>
+                <Link href="/upload" className="hover:text-gray-900">Identify</Link>
                 <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
                 <Link href="/collections" className="hover:text-gray-900">Collections</Link>
                 {showAdmin && <Link href="/admin" className="hover:text-violet-700">Admin</Link>}
